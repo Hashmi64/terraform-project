@@ -1,0 +1,64 @@
+- hosts: ec2
+  become: yes
+
+  tasks:
+
+    - name: Update system
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install base tools
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - git
+          - curl
+          - ca-certificates
+          - gnupg
+        state: present
+
+    - name: Remove apt locks (fix)
+      shell: |
+        rm -f /var/lib/apt/lists/lock
+        rm -f /var/cache/apt/archives/lock
+        rm -f /var/lib/dpkg/lock
+        rm -f /var/lib/dpkg/lock-frontend
+        dpkg --configure -a
+      ignore_errors: yes
+
+    # ------------ 100% WORKING NODE.JS INSTALL -----------------
+    - name: Download NodeSource setup script
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource.sh
+      args:
+        executable: /bin/bash
+
+    - name: Run NodeSource setup script
+      shell: |
+        bash /tmp/nodesource.sh
+      args:
+        executable: /bin/bash
+
+    - name: Install Node.js
+      apt:  
+        name: nodejs
+        state: present
+    # ------------------------------------------------------------
+
+    - name: Check node version
+      shell: node -v
+      register: node_version
+
+    - name: Show Node.js version
+      debug:
+        msg: "{{ node_version.stdout }}"
+
+    - name: Check npm version
+      shell: npm -v
+      register: npm_version
+
+    - name: Show npm version
+      debug:
+        msg: "{{ npm_version.stdout }}"

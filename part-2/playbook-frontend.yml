@@ -1,0 +1,75 @@
+---
+- name: Setup Express Frontend
+  hosts: frontend
+  become: yes
+
+  tasks:
+
+    - name: Update system
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install base tools
+      apt:
+        name:
+          - git
+          - curl
+          - ca-certificates
+          - gnupg
+        state: present
+
+    # ---------- Install Node.js ----------
+    - name: Download NodeSource setup script
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource.sh
+      args:
+        executable: /bin/bash
+
+    - name: Run NodeSource setup script
+      shell: |
+        bash /tmp/nodesource.sh
+      args:
+        executable: /bin/bash
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+    # ------------------------------------
+
+    - name: Show Node version
+      shell: node -v
+      register: node_version
+
+    - debug:
+        msg: "Node version = {{ node_version.stdout }}"
+
+    - name: Create frontend folder
+      file:
+        path: /home/ubuntu/frontend
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Copy Express app
+      copy:
+        src: frontend/server.js
+        dest: /home/ubuntu/frontend/server.js
+        owner: ubuntu
+        group: ubuntu
+
+    # ---------- INSTALL DEPENDENCIES HERE ----------
+    - name: Install npm packages
+      shell: |
+        cd /home/ubuntu/frontend
+        npm install express axios
+      args:
+        executable: /bin/bash
+    # ------------------------------------------------
+
+    - name: Start Express server with nohup
+      shell: |
+        nohup node /home/ubuntu/frontend/server.js > /home/ubuntu/frontend/frontend.log 2>&1 &
+      args:
+        executable: /bin/bash
